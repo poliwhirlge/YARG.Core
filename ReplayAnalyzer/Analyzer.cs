@@ -35,7 +35,7 @@ public class Analyzer
 
     public void Run()
     {
-        RunAnalyzer(null);
+        RunAnalyzer(0, null);
     }
 
     public void RunWithSimulatedUpdates()
@@ -58,7 +58,7 @@ public class Analyzer
     {
         var random = new Random();
         var frameTimes = new List<double>();
-        
+
         double secondsPerFrame = 1.0 / fps;
         double endTime = _chart.GetEndTime();
         for (double time = -2; time < endTime; time += secondsPerFrame)
@@ -81,6 +81,7 @@ public class Analyzer
         foreach (var frame in _replay.Frames)
         {
             RunFrame(frame, frameUpdates);
+            break;
         }
 
         _bandScores.Add(fps, _currentBandScore);
@@ -100,7 +101,8 @@ public class Analyzer
             {
                 engine.QueueInput(input);
             }
-            engine.UpdateEngine();
+
+            engine.UpdateEngineInputs();
         }
         else
         {
@@ -134,7 +136,7 @@ public class Analyzer
         int score = GetScore(engine, replayFrame);
         Console.WriteLine($"> Done running for {replayFrame.PlayerInfo.Profile.Name}, final score: {score}");
         _currentBandScore += score;
-        
+
         EventLog = engine.EventLogger;
     }
 

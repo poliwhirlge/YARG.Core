@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using YARG.Core.Chart;
-using YARG.Core.Input;
 
 namespace YARG.Core.Engine.Vocals
 {

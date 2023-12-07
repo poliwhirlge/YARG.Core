@@ -6,7 +6,8 @@ using YARG.Core.Input;
 
 namespace YARG.Core.Engine.Guitar
 {
-    public abstract class GuitarEngine : BaseEngine<GuitarNote, GuitarEngineParameters, GuitarStats, GuitarEngineState>
+    public abstract class GuitarEngine : BaseEngine<GuitarNote, GuitarEngineParameters,
+        GuitarStats, GuitarEngineState>
     {
         public delegate void OverstrumEvent();
 
@@ -54,7 +55,7 @@ namespace YARG.Core.Engine.Guitar
             }
 
             // Cancel overstrum if past last note and no active sustains
-            if (State.NoteIndex >= Chart.Notes.Count - 1 && ActiveSustains.Count == 0)
+            if (State.NoteIndex >= Chart.Notes.Count && ActiveSustains.Count == 0)
             {
                 return;
             }
@@ -238,6 +239,52 @@ namespace YARG.Core.Engine.Guitar
             if (EngineStats.IsStarPowerActive)
             {
                 EngineStats.ScoreMultiplier *= 2;
+            }
+        }
+
+        protected override void RebaseStarPower(uint baseTick)
+        {
+            base.RebaseStarPower(baseTick);
+
+            State.StarPowerWhammyBaseTick = baseTick;
+        }
+
+        protected override double CalculateStarPowerGain(uint tick)
+            => State.StarPowerWhammyTimer.IsActive(State.CurrentTime) ?
+                CalculateStarPowerBeatProgress(tick, State.StarPowerWhammyBaseTick) : 0;
+
+        protected void UpdateWhammyStarPower(bool spSustainsActive)
+        {
+            if (spSustainsActive)
+            {
+                if (IsInputUpdate && CurrentInput.GetAction<GuitarAction>() == GuitarAction.Whammy)
+                {
+                    // Rebase when beginning to SP whammy
+                    if (!State.StarPowerWhammyTimer.IsActive(State.CurrentTime))
+                    {
+                        RebaseStarPower(State.CurrentTick);
+                    }
+
+                    State.StarPowerWhammyTimer.Start(State.CurrentTime);
+                }
+                else if (State.StarPowerWhammyTimer.IsExpired(State.CurrentTime))
+                {
+                    // Temporarily re-start whammy timer so that whammy gain gets calculated
+                    State.StarPowerWhammyTimer.Start(State.CurrentTime);
+
+                    // Commit final whammy gain amount
+                    UpdateStarPowerAmount(State.CurrentTick);
+                    RebaseStarPower(State.CurrentTick);
+
+                    // Stop whammy gain
+                    State.StarPowerWhammyTimer.Reset();
+                }
+            }
+            // Rebase after SP whammy ends to commit the final amount to the base
+            else if (State.StarPowerWhammyTimer.IsActive(State.CurrentTime))
+            {
+                RebaseStarPower(State.CurrentTick);
+                State.StarPowerWhammyTimer.Reset();
             }
         }
 

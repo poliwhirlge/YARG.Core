@@ -1,10 +1,7 @@
-﻿using System;
-
-namespace YARG.Core.Engine.Guitar
+﻿namespace YARG.Core.Engine.Guitar
 {
     public class GuitarEngineState : BaseEngineState
     {
-
         public byte ButtonMask;
         public byte LastButtonMask;
         public byte TapButtonMask;
@@ -16,13 +13,17 @@ namespace YARG.Core.Engine.Guitar
         public EngineTimer StrumLeniencyTimer;
         public EngineTimer HopoLeniencyTimer;
 
-        public EngineTimer FrontEndTimer;
+        public EngineTimer StarPowerWhammyTimer;
+
+        public double FrontEndStartTime;
+
+        public uint StarPowerWhammyBaseTick;
 
         public void Initialize(GuitarEngineParameters parameters)
         {
             StrumLeniencyTimer = new(parameters.StrumLeniency);
             HopoLeniencyTimer = new(parameters.HopoLeniency);
-            FrontEndTimer = new(Math.Abs(parameters.FrontEnd));
+            StarPowerWhammyTimer = new(parameters.StarPowerWhammyBuffer);
         }
 
         public override void Reset()
@@ -39,7 +40,9 @@ namespace YARG.Core.Engine.Guitar
 
             StrumLeniencyTimer.Reset();
             HopoLeniencyTimer.Reset();
-            FrontEndTimer.Reset();
+            StarPowerWhammyTimer.Reset();
+
+            FrontEndStartTime = 0;
         }
     }
 }
