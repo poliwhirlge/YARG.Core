@@ -15,11 +15,11 @@ namespace YARG.Core.Engine.Guitar.Engines
         {
             UpdateTimeVariables(time);
             //UpdateTimers();
-            
-            DepleteStarPower(GetUsedStarPower());
-            
+
+            UpdateStarPower();
+
             UpdateInput();
-            
+
             if (State.IsStarPowerInputActive && EngineStats.CanStarPowerActivate)
             {
                 ActivateStarPower();
@@ -30,6 +30,9 @@ namespace YARG.Core.Engine.Guitar.Engines
                 State.TapButtonMask = 0;
             }
 
+            // TODO Implement strumming stuff
+
+            // Quits early if there are no notes left
             if (State.NoteIndex >= Notes.Count)
             {
                 UpdateSustains();
@@ -37,6 +40,8 @@ namespace YARG.Core.Engine.Guitar.Engines
             }
 
             var note = Notes[State.NoteIndex];
+
+            // TODO More strumming stuff
 
             if (IsInputUpdate && IsFretInput(CurrentInput))
             {
@@ -58,7 +63,7 @@ namespace YARG.Core.Engine.Guitar.Engines
             }
 
             bool isNoteHit = CheckForNoteHit();
-            
+
             UpdateSustains();
             return isNoteHit;
         }
@@ -66,34 +71,34 @@ namespace YARG.Core.Engine.Guitar.Engines
         protected override bool CheckForNoteHit()
         {
             var note = Notes[State.NoteIndex];
+            double fullWindow = EngineParameters.HitWindow.CalculateHitWindow(GetAverageNoteDistance(note));
 
             if (note.WasHit || note.WasMissed)
             {
                 return false;
             }
-            
-            if (State.CurrentTime < note.Time + EngineParameters.FrontEnd)
+
+            if (State.CurrentTime < note.Time + EngineParameters.HitWindow.GetFrontEnd(fullWindow))
             {
                 return false;
             }
 
-            if (State.CurrentTime > note.Time + EngineParameters.BackEnd && !note.WasHit)
+            if (State.CurrentTime > note.Time + EngineParameters.HitWindow.GetBackEnd(fullWindow) && !note.WasHit)
             {
                 MissNote(note);
                 return true;
             }
 
+            // TODO Note skipping
             if (!CanNoteBeHit(note))
             {
                 return false;
             }
-            
-            // Handles hitting hopo/tap notes
+
+            // Handles hitting a hopo/tap notes
             // If first note is a hopo then it can be hit without combo (for practice mode)
-            bool canHitTap = State.TapButtonMask == 0;// && note.IsTap;
-            bool canHitHopo = note.IsHopo && (EngineStats.Combo > 0 || State.NoteIndex == 0);
-            
-            if ((canHitTap || (canHitHopo && false)) && !State.WasNoteGhosted)
+            bool hopoCondition = note.IsHopo && (EngineStats.Combo > 0 || State.NoteIndex == 0);
+            if (State.TapButtonMask == 0 /*&& (hopoCondition || note.IsTap)*/ && !State.WasNoteGhosted)
             {
                 return HitNote(note);
             }
@@ -200,13 +205,18 @@ namespace YARG.Core.Engine.Guitar.Engines
 
             if (note.IsHopo || note.IsTap)
             {
-                bool strumLeniencyActive = State.StrumLeniencyTimer.IsActive(State.CurrentTime);
+                bool strumLeniencyActive = false;//State.StrumLeniencyTimer.IsActive(State.CurrentTime);
 
                 // Disallow hitting if front end timer is not in range of note time and didn't strum
                 // (tried to hit as a hammeron/pulloff)
                 // Also allows first note to be hit without infinite front end
 
-                if (!EngineParameters.InfiniteFrontEnd && State.FrontEndTimer.IsExpired(note.Time) /* && !strumLeniencyActive */ && State.NoteIndex > 0)
+                double hitWindow = EngineParameters.HitWindow.CalculateHitWindow(GetAverageNoteDistance(note));
+                double frontEnd = EngineParameters.HitWindow.GetFrontEnd(hitWindow);
+
+                double frontEndAbs = Math.Abs(frontEnd);
+                bool frontEndExpired = EngineTimer.IsExpired(State.FrontEndStartTime, note.Time, frontEndAbs);
+                if (!EngineParameters.InfiniteFrontEnd && frontEndExpired && !strumLeniencyActive && State.NoteIndex > 0)
                 {
                     return false;
                 }
@@ -219,16 +229,16 @@ namespace YARG.Core.Engine.Guitar.Engines
             {
                 // This line allows for hopos/taps to be hit using infinite front end after strumming
                 State.TapButtonMask = 0;
-                
+
                 // Does the same thing but ensures it still works when infinite front end is disabled
-                State.FrontEndTimer.Reset();
+                EngineTimer.Reset(ref State.FrontEndStartTime);
 
                 State.WasHopoStrummed = false;
             }
 
             return base.HitNote(note);
         }
-        
+
         protected override void MissNote(GuitarNote note)
         {
             State.TapButtonMask = State.ButtonMask;
@@ -238,7 +248,7 @@ namespace YARG.Core.Engine.Guitar.Engines
         protected override void UpdateSustains()
         {
         }
-        
+
         protected void UpdateInput()
         {
             if (!IsInputUpdate)
@@ -253,20 +263,13 @@ namespace YARG.Core.Engine.Guitar.Engines
             {
                 State.LastButtonMask = State.ButtonMask;
                 ToggleFret(CurrentInput.Action, CurrentInput.Button);
-                State.FrontEndTimer.Start(State.CurrentTime);
-                
-                EventLogger.LogEvent(new TimerEngineEvent(State.CurrentTime)
-                {
-                    TimerName = "FrontEnd",
-                    TimerStarted = true,
-                    TimerValue = Math.Abs(EngineParameters.FrontEnd),
-                });
+                State.FrontEndStartTime = State.CurrentTime;
             } else if (CurrentInput.GetAction<GuitarAction>() == GuitarAction.StarPower)
             {
                 State.IsStarPowerInputActive = CurrentInput.Button;
             }
         }
-        
+
         protected bool CheckForGhostInput(GuitarNote note)
         {
             // First note cannot be ghosted, nor can a note be ghosted if a button is unpressed (pulloff)
@@ -292,7 +295,7 @@ namespace YARG.Core.Engine.Guitar.Engines
 
             return false;
         }
-        
+
         private static int GetMostSignificantBit(int mask)
         {
             // Gets the most significant bit of the mask
