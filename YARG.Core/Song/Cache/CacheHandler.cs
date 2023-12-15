@@ -48,7 +48,7 @@ namespace YARG.Core.Song.Cache
         /// Format is YY_MM_DD_RR: Y = year, M = month, D = day, R = revision (reset across dates, only increment
         /// if multiple cache version changes happen in a single day).
         /// </summary>
-        public const int CACHE_VERSION = 23_11_14_03;
+        public const int CACHE_VERSION = 23_12_12_01;
 
         private static readonly object dirLock = new();
         private static readonly object fileLock = new();
@@ -254,6 +254,15 @@ namespace YARG.Core.Song.Cache
                         break;
                     case ScanResult.PathTooLong:
                         writer.WriteLine("Path too long for the Windows Filesystem (path limitation can be changed in registry settings if you so wish)");
+                        break;
+                    case ScanResult.MultipleMidiTrackNames:
+                        writer.WriteLine("At least one track fails midi spec for containing multiple unique track names (thus making it ambiguous)");
+                        break;
+                    case ScanResult.MultipleMidiTrackNames_Update:
+                        writer.WriteLine("At least one track fails midi spec for containing multiple unique track names (thus making it ambiguous) - Thrown by a midi update");
+                        break;
+                    case ScanResult.MultipleMidiTrackNames_Upgrade:
+                        writer.WriteLine("At least one track fails midi spec for containing multiple unique track names (thus making it ambiguous) - Thrown by a pro guitar upgrade");
                         break;
                 }
                 writer.WriteLine();
