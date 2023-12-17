@@ -163,6 +163,8 @@ if (runMode is 0 or 1)
 
     // Results
 
+    var color = Console.ForegroundColor;
+
     if (runMode == 0)
     {
         var kp = analyzer.BandScores.First();
@@ -242,6 +244,7 @@ if (runMode is 0 or 1)
             Console.WriteLine($"Distinct scores : {distinctScores.Count}");
         }
     }
+    Console.ForegroundColor = color;
 }
 // else
 // {
