@@ -60,7 +60,7 @@ public class Analyzer
         var frameTimes = new List<double>();
 
         double secondsPerFrame = 1.0 / fps;
-        double endTime = _chart.GetEndTime();
+        double endTime = _chart.GetEndTime() + 1;
         for (double time = -2; time < endTime; time += secondsPerFrame)
         {
             // Add a little bit of inconsistency
