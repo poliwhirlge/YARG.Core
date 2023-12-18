@@ -295,18 +295,5 @@ namespace YARG.Core.Engine.Guitar.Engines
 
             return false;
         }
-
-        private static int GetMostSignificantBit(int mask)
-        {
-            // Gets the most significant bit of the mask
-            var msbIndex = 0;
-            while (mask != 0)
-            {
-                mask >>= 1;
-                msbIndex++;
-            }
-
-            return msbIndex;
-        }
     }
 }
