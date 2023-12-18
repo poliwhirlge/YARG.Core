@@ -195,7 +195,8 @@ if (runMode is 0 or 1)
                     Console.WriteLine(
                         $"({analyzerNoteEvents[i].NoteIndex}, {analyzerNoteEvents[i].NoteMask}) " +
                         $"({metaDataNoteEvents[i].NoteIndex}, {metaDataNoteEvents[i].NoteMask}):\n" +
-                        $"- (A) {analyzerNoteEvents[i].WasHit} != (M) {metaDataNoteEvents[i].WasHit}");
+                        $"- (A) {analyzerNoteEvents[i].WasHit} != (M) {metaDataNoteEvents[i].WasHit}" +
+                        $"- (A) {analyzerNoteEvents[i].WasSkipped} -- (M) {metaDataNoteEvents[i].WasSkipped}");
                 }
             }
         }

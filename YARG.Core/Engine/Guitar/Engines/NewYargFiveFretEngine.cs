@@ -89,9 +89,44 @@ namespace YARG.Core.Engine.Guitar.Engines
                 return true;
             }
 
-            // TODO Note skipping
+            // Note skipping, useful for combo regain
             if (!CanNoteBeHit(note))
             {
+                if (EngineStats.Combo != 0)
+                {
+                    return false;
+                }
+
+                // Skipping hopos or taps not allowed if its the first note
+                if ((note.IsHopo || note.IsTap) && State.NoteIndex == 0)
+                {
+                    return false;
+                }
+
+                var next = note.NextNote;
+                while (next is not null)
+                {
+                    double hitWindow = EngineParameters.HitWindow.CalculateHitWindow(GetAverageNoteDistance(next));
+                    if (State.CurrentTime < next.Time + EngineParameters.HitWindow.GetFrontEnd(hitWindow))
+                    {
+                        return false;
+                    }
+
+                    // Don't need to check back end because if we're here then the previous note was not out of time
+
+                    if (CanNoteBeHit(next) &&
+                        (/*State.StrummedThisUpdate || State.StrumLeniencyTimer.IsActive(State.CurrentTime) ||*/ next.IsTap)
+                        && State.TapButtonMask == 0)
+                    {
+                        if (HitNote(next))
+                        {
+                            return true;
+                        }
+                    }
+
+                    next = next.NextNote;
+                }
+
                 return false;
             }
 

@@ -98,15 +98,8 @@ namespace YARG.Core.Engine.Guitar
                 skipped = true;
                 MissNote(prevNote);
 
-                EventLogger.LogEvent(new NoteEngineEvent(State.CurrentTime)
-                {
-                    NoteTime = prevNote.Time,
-                    NoteLength = prevNote.TimeLength,
-                    NoteIndex = State.NoteIndex,
-                    NoteMask = prevNote.NoteMask,
-                    WasHit = false,
-                    WasSkipped = true,
-                });
+                // This is kind of temporary for replay analysis
+                (EventLogger.Events[^1] as NoteEngineEvent)!.WasSkipped = true;
 
                 prevNote = prevNote.PreviousNote;
             }
