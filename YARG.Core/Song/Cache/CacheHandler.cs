@@ -48,7 +48,7 @@ namespace YARG.Core.Song.Cache
         /// Format is YY_MM_DD_RR: Y = year, M = month, D = day, R = revision (reset across dates, only increment
         /// if multiple cache version changes happen in a single day).
         /// </summary>
-        public const int CACHE_VERSION = 23_12_12_01;
+        public const int CACHE_VERSION = 23_12_20_01;
 
         private static readonly object dirLock = new();
         private static readonly object fileLock = new();
@@ -79,8 +79,7 @@ namespace YARG.Core.Song.Cache
             _progress = default;
             iniGroups = new(baseDirectories.Count);
             foreach (string dir in baseDirectories)
-                if (!iniGroups.ContainsKey(dir))
-                    iniGroups.Add(dir, new());
+                iniGroups.TryAdd(dir, new IniGroup());
         }
 
         private IniGroup? GetBaseIniGroup(string path)
