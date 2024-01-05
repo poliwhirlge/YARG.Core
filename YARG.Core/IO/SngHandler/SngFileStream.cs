@@ -27,7 +27,7 @@ namespace YARG.Core.IO
             }
         }
 
-        public static byte[] LoadFile(Stream stream, long fileSize, long position, SngMask mask)
+        public static byte[] LoadFile(Stream stream, SngMask mask, long fileSize, long position)
         {
             if (stream.Seek(position, SeekOrigin.Begin) != position)
                 throw new EndOfStreamException();
@@ -90,7 +90,7 @@ namespace YARG.Core.IO
             }
         }
 
-        public SngFileStream(Stream stream, long fileSize, long position, SngMask mask)
+        public SngFileStream(Stream stream, SngMask mask, long fileSize, long position)
         {
             _stream = stream;
 
@@ -118,7 +118,7 @@ namespace YARG.Core.IO
                 return 0;
 
             int read = 0;
-            long bytesLeftInSection = dataBuffer.Size - bufferPosition;
+            long bytesLeftInSection = dataBuffer.Length - bufferPosition;
             if (bytesLeftInSection > fileSize - _position)
                 bytesLeftInSection = fileSize - _position;
 
@@ -134,7 +134,7 @@ namespace YARG.Core.IO
                 _position += readCount;
                 bufferPosition += readCount;
 
-                if (bufferPosition < dataBuffer.Size || _position == fileSize)
+                if (bufferPosition < dataBuffer.Length || _position == fileSize)
                     break;
 
                 bufferPosition = 0;

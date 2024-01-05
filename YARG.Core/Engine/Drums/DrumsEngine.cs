@@ -20,7 +20,6 @@ namespace YARG.Core.Engine.Drums
             DrumsEngineParameters engineParameters)
             : base(chart, syncTrack, engineParameters)
         {
-            BaseScore = CalculateBaseScore();
         }
 
         public override void Reset(bool keepCurrentButtons = false)
@@ -40,6 +39,15 @@ namespace YARG.Core.Engine.Drums
             if (State.NoteIndex >= Chart.Notes.Count - 1)
             {
                 return;
+            }
+
+            if (State.NoteIndex < Notes.Count)
+            {
+                // Don't remove the phrase if the current note being overstrummed is the start of a phrase
+                if (!Notes[State.NoteIndex].IsStarPowerStart)
+                {
+                    StripStarPower(Notes[State.NoteIndex]);
+                }
             }
 
             EngineStats.Combo = 0;

@@ -171,11 +171,11 @@ namespace MoonscraperChartEditor.Song.IO
 
             foreach (var tempo in tempoMap.GetTempoChanges())
             {
-                song.bpms.Add(new MoonTempo((uint)tempo.Time, (uint)(tempo.Value.BeatsPerMinute * 1000)));
+                song.bpms.Add(new MoonTempo((uint) tempo.Time, (float) tempo.Value.BeatsPerMinute));
             }
             foreach (var timesig in tempoMap.GetTimeSignatureChanges())
             {
-                song.timeSignatures.Add(new MoonTimeSignature((uint)timesig.Time, (uint)timesig.Value.Numerator, (uint)timesig.Value.Denominator));
+                song.timeSignatures.Add(new MoonTimeSignature((uint) timesig.Time, (uint) timesig.Value.Numerator, (uint) timesig.Value.Denominator));
             }
             song.UpdateBPMTimeValues();
         }
@@ -264,15 +264,15 @@ namespace MoonscraperChartEditor.Song.IO
 
                 if (MidIOHelper.IsTextEvent(trackEvent, out var text) && !text.Text.Contains('['))
                 {
-                    string lyricEvent = TextEventDefinitions.LYRIC_PREFIX_WITH_SPACE + text.Text;
+                    string lyricEvent = TextEvents.LYRIC_PREFIX_WITH_SPACE + text.Text;
                     song.events.Add(new MoonText(lyricEvent, (uint)absoluteTime));
                 }
                 else if (trackEvent is NoteEvent note && (byte)note.NoteNumber is MidIOHelper.LYRICS_PHRASE_1 or MidIOHelper.LYRICS_PHRASE_2)
                 {
                     if (note.EventType == MidiEventType.NoteOn)
-                        song.events.Add(new MoonText(TextEventDefinitions.LYRIC_PHRASE_START, (uint)absoluteTime));
+                        song.events.Add(new MoonText(TextEvents.LYRIC_PHRASE_START, (uint)absoluteTime));
                     else if (note.EventType == MidiEventType.NoteOff)
-                        song.events.Add(new MoonText(TextEventDefinitions.LYRIC_PHRASE_END, (uint)absoluteTime));
+                        song.events.Add(new MoonText(TextEvents.LYRIC_PHRASE_END, (uint)absoluteTime));
                 }
             }
         }
@@ -490,7 +490,7 @@ namespace MoonscraperChartEditor.Song.IO
             // No brackets to strip off, on vocals this is most likely a lyric event
             else if (MoonSong.InstrumentToChartGameMode(processParams.instrument) is MoonChart.GameMode.Vocals)
             {
-                eventName = TextEventDefinitions.LYRIC_PREFIX_WITH_SPACE + text.Text;
+                eventName = TextEvents.LYRIC_PREFIX_WITH_SPACE + text.Text;
             }
 
             if (processParams.textProcessMap.TryGetValue(eventName, out var processFn))
@@ -785,9 +785,9 @@ namespace MoonscraperChartEditor.Song.IO
 
             uint startTick = (uint)timedEvent.startTick;
             uint endTick = (uint)timedEvent.endTick;
-            // Exclude the last tick of the phrase
-            if (endTick > startTick)
-                --endTick;
+            // Tap note phrases do *not* exclude the last tick, based on both Phase Shift and Clone Hero
+            // if (endTick > startTick)
+            //     --endTick;
 
             if (startEvent.difficulty == PhaseShiftSysEx.Difficulty.All)
             {
@@ -820,7 +820,7 @@ namespace MoonscraperChartEditor.Song.IO
 
             uint startTick = (uint)timedEvent.startTick;
             uint endTick = (uint)timedEvent.endTick;
-            // Exclude the last tick of the phrase
+            // Open note phrases *do* exclude the last tick, based on both Phase Shift and Clone Hero
             if (endTick > startTick)
                 --endTick;
 

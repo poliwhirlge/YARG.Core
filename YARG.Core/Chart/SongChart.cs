@@ -13,10 +13,11 @@ namespace YARG.Core.Chart
         public uint Resolution => SyncTrack.Resolution;
 
         public List<TextEvent> GlobalEvents { get; set; } = new();
+        public List<Section> Sections { get; set; } = new();
+
         public SyncTrack SyncTrack { get; set; } = new();
         public VenueTrack VenueTrack { get; set; } = new();
-
-        public List<Section> Sections { get; set; } = new();
+        public LyricsTrack Lyrics { get; set; } = new();
 
         public InstrumentTrack<GuitarNote> FiveFretGuitar { get; set; } = new(Instrument.FiveFretGuitar);
         public InstrumentTrack<GuitarNote> FiveFretCoop { get; set; } = new(Instrument.FiveFretCoopGuitar);
@@ -110,6 +111,7 @@ namespace YARG.Core.Chart
             SyncTrack = loader.LoadSyncTrack();
             VenueTrack = loader.LoadVenueTrack();
             Sections = loader.LoadSections();
+            Lyrics = loader.LoadLyrics();
 
             FiveFretGuitar = loader.LoadGuitarTrack(Instrument.FiveFretGuitar);
             FiveFretCoop = loader.LoadGuitarTrack(Instrument.FiveFretCoopGuitar);
@@ -139,6 +141,54 @@ namespace YARG.Core.Chart
             Harmony = loader.LoadVocalsTrack(Instrument.Harmony);
 
             // Dj = loader.LoadDjTrack(Instrument.Dj);
+
+            PostProcessSections();
+        }
+
+        private void PostProcessSections()
+        {
+            const uint AUTO_GEN_SECTION_COUNT = 10;
+
+            uint lastTick = GetLastTick();
+
+            // If there are no sections in the chart, auto-generate some sections.
+            // This prevents issues with songs with no sections, such as in practice mode.
+            if (Sections.Count <= 0)
+            {
+                uint startTick = 0;
+                double startTime = SyncTrack.TickToTime(startTick);
+
+                // `i` is effectively the "ending index" since start tick and time is
+                // always one index behind.
+                for (uint i = 1; i <= AUTO_GEN_SECTION_COUNT; i++)
+                {
+                    uint endTick = lastTick / AUTO_GEN_SECTION_COUNT * i;
+                    double endTime = SyncTrack.TickToTime(endTick);
+
+                    // "0% - 10%", "10% - 20%", etc.
+                    var sectionName =
+                        $"{100f / AUTO_GEN_SECTION_COUNT * (i - 1):N0}% - {100f / AUTO_GEN_SECTION_COUNT * i:N0}%";
+
+                    var section = new Section(sectionName, startTime, startTick)
+                    {
+                        TickLength = endTick - startTick,
+                        TimeLength = endTime - startTime,
+                    };
+
+                    Sections.Add(section);
+
+                    // Set the start of the next section to the end of this one
+                    startTick = endTick;
+                    startTime = endTime;
+                }
+            }
+            else
+            {
+                // Otherwise make sure the length of the last section is correct
+                var lastSection = Sections[^1];
+                lastSection.TickLength = lastTick - lastSection.Tick;
+                lastSection.TimeLength = SyncTrack.TickToTime(lastTick) - lastSection.Time;
+            }
         }
 
         public void Append(SongChart song)
@@ -229,7 +279,6 @@ namespace YARG.Core.Chart
             };
         }
 
-
         public InstrumentTrack<GuitarNote> GetSixFretTrack(Instrument instrument)
         {
             return instrument switch
@@ -242,7 +291,6 @@ namespace YARG.Core.Chart
             };
         }
 
-
         public InstrumentTrack<DrumNote> GetDrumsTrack(Instrument instrument)
         {
             return instrument switch
@@ -253,7 +301,6 @@ namespace YARG.Core.Chart
                 _ => throw new ArgumentException($"Instrument {instrument} is not a drums instrument!")
             };
         }
-
 
         public InstrumentTrack<ProGuitarNote> GetProGuitarTrack(Instrument instrument)
         {
