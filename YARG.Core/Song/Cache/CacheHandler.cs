@@ -72,7 +72,7 @@ namespace YARG.Core.Song.Cache
             }
 
             handler.CleanupDuplicates();
-            handler.SortCategories();
+            handler.SortEntries();
             YargTrace.DebugInfo($"Total Entries: {_progress.Count}");
             return true;
         }
@@ -102,7 +102,7 @@ namespace YARG.Core.Song.Cache
             handler.CleanupDuplicates();
 
             _progress.Stage = ScanStage.Sorting;
-            handler.SortCategories();
+            handler.SortEntries();
             YargTrace.DebugInfo($"Total Entries: {_progress.Count}");
 
             try
@@ -176,7 +176,7 @@ namespace YARG.Core.Song.Cache
             }
         }
 
-        protected abstract void SortEntries(InstrumentCategory[] instruments);
+        protected abstract void SortEntries();
         protected abstract void AddUpdates(UpdateGroup group, Dictionary<string, List<YARGDTAReader>> nodes, bool removeEntries);
         protected abstract void AddUpgrade(string name, YARGDTAReader? reader, IRBProUpgrade upgrade);
         protected abstract void AddPackedCONGroup(PackedCONGroup group);
@@ -261,20 +261,6 @@ namespace YARG.Core.Song.Cache
 
                 TryRemove<UnpackedCONGroup, RBCONEntry>(extractedConGroups, entry);
             }
-        }
-
-        private void SortCategories()
-        {
-            var enums = (Instrument[])Enum.GetValues(typeof(Instrument));
-            var instruments = new InstrumentCategory[enums.Length];
-            for (int i = 0; i < instruments.Length; ++i)
-                instruments[i] = new InstrumentCategory(enums[i]);
-
-            SortEntries(instruments);
-
-            foreach (var instrument in instruments)
-                if (instrument.Entries.Count > 0)
-                    cache.Instruments.Add(instrument.Key, instrument.Entries);
         }
 
         private void WriteBadSongs(string badSongsLocation)
