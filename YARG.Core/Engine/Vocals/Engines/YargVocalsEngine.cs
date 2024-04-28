@@ -1,13 +1,15 @@
 ﻿using System;
 using YARG.Core.Chart;
 using YARG.Core.Input;
+using YARG.Core.Game;
 
 namespace YARG.Core.Engine.Vocals.Engines
 {
     public class YargVocalsEngine : VocalsEngine
     {
-        public YargVocalsEngine(InstrumentDifficulty<VocalNote> chart, SyncTrack syncTrack, VocalsEngineParameters engineParameters)
-            : base(chart, syncTrack, engineParameters)
+        public YargVocalsEngine(InstrumentDifficulty<VocalNote> chart, SyncTrack syncTrack, VocalsEngineParameters engineParameters,
+        EngineManager engineManager, YargProfile yargProfile)
+            : base(chart, syncTrack, engineParameters, engineManager, yargProfile)
         {
         }
 

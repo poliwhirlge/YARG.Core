@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using YARG.Core.Chart;
+using YARG.Core.Game;
 
 namespace YARG.Core.Engine.Vocals
 {
@@ -18,8 +19,8 @@ namespace YARG.Core.Engine.Vocals
         public PhraseHitEvent? OnPhraseHit;
 
         protected VocalsEngine(InstrumentDifficulty<VocalNote> chart, SyncTrack syncTrack,
-            VocalsEngineParameters engineParameters)
-            : base(chart, syncTrack, engineParameters, false)
+            VocalsEngineParameters engineParameters, EngineManager engineManager, YargProfile yargProfile)
+            : base(chart, syncTrack, engineParameters, false, engineManager, yargProfile)
         {
         }
 

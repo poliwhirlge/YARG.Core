@@ -1,6 +1,7 @@
 ﻿using System;
 using YARG.Core.Chart;
 using YARG.Core.Engine.Logging;
+using YARG.Core.Game;
 using YARG.Core.Input;
 
 namespace YARG.Core.Engine.Guitar.Engines
@@ -8,7 +9,7 @@ namespace YARG.Core.Engine.Guitar.Engines
     public class YargFiveFretEngine : GuitarEngine
     {
         public YargFiveFretEngine(InstrumentDifficulty<GuitarNote> chart, SyncTrack syncTrack,
-            GuitarEngineParameters engineParameters) : base(chart, syncTrack, engineParameters)
+            GuitarEngineParameters engineParameters, EngineManager engineManager, YargProfile yargProfile) : base(chart, syncTrack, engineParameters, engineManager, yargProfile)
         {
         }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using YARG.Core.Chart;
 using YARG.Core.Engine.Logging;
+using YARG.Core.Game;
 using YARG.Core.Input;
 using YARG.Core.Logging;
 
@@ -39,12 +40,17 @@ namespace YARG.Core.Engine
         /// as singular pieces.
         /// </summary>
         protected readonly bool TreatChordAsSeparate;
+        protected readonly EngineManager? EngineManager;
+        protected readonly YargProfile YargProfile;
 
-        protected BaseEngine(SyncTrack syncTrack, bool isChordSeparate)
+        protected BaseEngine(SyncTrack syncTrack, bool isChordSeparate, EngineManager? engineManager, YargProfile yargProfile)
         {
             SyncTrack = syncTrack;
             Resolution = syncTrack.Resolution;
             TreatChordAsSeparate = isChordSeparate;
+            EngineManager = engineManager;
+            YargProfile = yargProfile;
+            EngineManager?.RegisterPlayer(yargProfile, this);
 
             EventLogger = new EngineEventLogger();
             InputQueue = new Queue<GameInput>();
@@ -185,6 +191,8 @@ namespace YARG.Core.Engine
             BaseParameters.SongSpeed = speed;
             BaseParameters.HitWindow.Scale = speed;
         }
+
+        public virtual void AwardUnisonBonusStarPower() {}
     }
 
     public abstract class BaseEngine<TNoteType, TEngineParams, TEngineStats, TEngineState> : BaseEngine
@@ -227,6 +235,8 @@ namespace YARG.Core.Engine
 
         public delegate void SoloEndEvent(SoloSection soloSection);
 
+        public delegate void UnisonBonusEvent();
+
         public NoteHitEvent?    OnNoteHit;
         public NoteMissedEvent? OnNoteMissed;
 
@@ -236,6 +246,8 @@ namespace YARG.Core.Engine
 
         public SoloStartEvent? OnSoloStart;
         public SoloEndEvent?   OnSoloEnd;
+
+        public UnisonBonusEvent? OnUnisonBonus;
 
         protected readonly int[]  StarScoreThresholds;
         protected readonly double TicksPerSustainPoint;
@@ -255,7 +267,7 @@ namespace YARG.Core.Engine
         public override BaseStats            BaseStats      => EngineStats;
 
         protected BaseEngine(InstrumentDifficulty<TNoteType> chart, SyncTrack syncTrack,
-            TEngineParams engineParameters, bool isChordSeparate) : base(syncTrack, isChordSeparate)
+            TEngineParams engineParameters, bool isChordSeparate, EngineManager engineManager, YargProfile yargProfile) : base(syncTrack, isChordSeparate, engineManager, yargProfile)
         {
             Chart = chart;
             Notes = Chart.Notes;
@@ -634,7 +646,7 @@ namespace YARG.Core.Engine
             }
         }
 
-        protected void AwardStarPower(TNoteType note)
+        public void AwardStarPower(TNoteType note)
         {
             double previous = EngineStats.StarPowerAmount;
             double expected = EngineStats.StarPowerAmount += STAR_POWER_PHRASE_AMOUNT;
@@ -653,6 +665,28 @@ namespace YARG.Core.Engine
                     previous, EngineStats.StarPowerAmount, expected);
 
             OnStarPowerPhraseHit?.Invoke(note);
+            EngineManager?.OnStarPowerPhraseHit(YargProfile, note);
+        }
+
+        public override void AwardUnisonBonusStarPower()
+        {
+            double previous = EngineStats.StarPowerAmount;
+            double expected = EngineStats.StarPowerAmount += STAR_POWER_PHRASE_AMOUNT;
+            if (EngineStats.StarPowerAmount > 1)
+            {
+                expected = EngineStats.StarPowerAmount = 1;
+            }
+
+            RebaseProgressValues(State.CurrentTick);
+
+            YargLogger.AssertFormat(EngineStats.StarPowerAmount - previous >= 0,
+                "Unexpected jump in SP amount after awarding! Went from {0} to {1}, should not be decreasing",
+                    previous, EngineStats.StarPowerAmount);
+            YargLogger.AssertFormat(Math.Abs(EngineStats.StarPowerAmount - expected) < 0.001,
+                "Unexpected jump in SP amount after awarding! Went from {0} to {1}, should be {2}",
+                    previous, EngineStats.StarPowerAmount, expected);
+            
+            OnUnisonBonus?.Invoke();
         }
 
         protected void UpdateStarPower()

@@ -1,12 +1,14 @@
 using YARG.Core.Chart;
 using YARG.Core.Input;
+using YARG.Core.Game;
 
 namespace YARG.Core.Engine.Drums.Engines
 {
     public class YargDrumsEngine : DrumsEngine
     {
-        public YargDrumsEngine(InstrumentDifficulty<DrumNote> chart, SyncTrack syncTrack, DrumsEngineParameters engineParameters)
-            : base(chart, syncTrack, engineParameters)
+        public YargDrumsEngine(InstrumentDifficulty<DrumNote> chart, SyncTrack syncTrack, DrumsEngineParameters engineParameters, 
+            EngineManager engineManager, YargProfile yargProfile)
+            : base(chart, syncTrack, engineParameters, engineManager, yargProfile)
         {
         }
 
