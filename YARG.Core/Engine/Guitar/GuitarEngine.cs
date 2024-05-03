@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using YARG.Core.Chart;
 using YARG.Core.Engine.Logging;
+using YARG.Core.Game;
 using YARG.Core.Input;
 using YARG.Core.Logging;
 
@@ -43,8 +44,8 @@ namespace YARG.Core.Engine.Guitar
         protected List<ActiveSustain> ActiveSustains = new();
 
         protected GuitarEngine(InstrumentDifficulty<GuitarNote> chart, SyncTrack syncTrack,
-            GuitarEngineParameters engineParameters, bool isBot)
-            : base(chart, syncTrack, engineParameters, false, isBot)
+            GuitarEngineParameters engineParameters, EngineManager? engineManager, YargProfile yargProfile)
+            : base(chart, syncTrack, engineParameters, false, engineManager, yargProfile)
         {
             State.Initialize(engineParameters);
         }

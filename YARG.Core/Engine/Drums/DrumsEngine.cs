@@ -1,5 +1,6 @@
 ﻿using System;
 using YARG.Core.Chart;
+using YARG.Core.Game;
 using YARG.Core.Input;
 
 namespace YARG.Core.Engine.Drums
@@ -17,8 +18,8 @@ namespace YARG.Core.Engine.Drums
         public PadHitEvent?  OnPadHit;
 
         protected DrumsEngine(InstrumentDifficulty<DrumNote> chart, SyncTrack syncTrack,
-            DrumsEngineParameters engineParameters, bool isBot)
-            : base(chart, syncTrack, engineParameters, true, isBot)
+            DrumsEngineParameters engineParameters, EngineManager? engineManager, YargProfile yargProfile)
+            : base(chart, syncTrack, engineParameters, true, engineManager, yargProfile)
         {
         }
 

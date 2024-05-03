@@ -132,7 +132,8 @@ namespace YARG.Core.Replays.Analyzer
                         notes,
                         _chart.SyncTrack,
                         (GuitarEngineParameters) parameters,
-                        profile.IsBot);
+                        null,
+                        profile);
                 }
                 case GameMode.FourLaneDrums:
                 case GameMode.FiveLaneDrums:
@@ -154,7 +155,8 @@ namespace YARG.Core.Replays.Analyzer
                         notes,
                         _chart.SyncTrack,
                         (DrumsEngineParameters) parameters,
-                        profile.IsBot);
+                        null,
+                        profile);
                 }
                 case GameMode.Vocals:
                 {
@@ -170,7 +172,8 @@ namespace YARG.Core.Replays.Analyzer
                         notes,
                         _chart.SyncTrack,
                         (VocalsEngineParameters) parameters,
-                        profile.IsBot);
+                        null,
+                        profile);
                 }
                 default:
                     throw new InvalidOperationException("Game mode not configured!");

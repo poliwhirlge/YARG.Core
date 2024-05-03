@@ -1,5 +1,6 @@
 ﻿using System;
 using YARG.Core.Chart;
+using YARG.Core.Game;
 using YARG.Core.Input;
 using YARG.Core.Logging;
 
@@ -8,8 +9,8 @@ namespace YARG.Core.Engine.Vocals.Engines
     public class YargVocalsEngine : VocalsEngine
     {
         public YargVocalsEngine(InstrumentDifficulty<VocalNote> chart, SyncTrack syncTrack,
-            VocalsEngineParameters engineParameters, bool isBot)
-            : base(chart, syncTrack, engineParameters, isBot)
+            VocalsEngineParameters engineParameters, EngineManager? engineManager, YargProfile yargProfile)
+            : base(chart, syncTrack, engineParameters, engineManager, yargProfile)
         {
         }
 

@@ -44,5 +44,23 @@ namespace YARG.Core.Chart
         {
             return new(this);
         }
+
+        public override bool Equals(Object obj)
+        {
+            return Equals(obj as Phrase);
+        }
+
+        public bool Equals(Phrase? phrase)
+        {
+            if (phrase == null)
+                return false;
+
+            return (Tick == phrase.Tick && TickEnd == phrase.TickEnd);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Tick, TickEnd, Type);
+        }
     }
 }

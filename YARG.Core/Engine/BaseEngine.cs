@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using YARG.Core.Chart;
 using YARG.Core.Engine.Logging;
+using YARG.Core.Game;
 using YARG.Core.Input;
 using YARG.Core.Logging;
 
@@ -44,14 +45,20 @@ namespace YARG.Core.Engine
         protected bool ReRunHitLogic;
 
         protected readonly bool IsBot;
+        protected readonly EngineManager? EngineManager;
+        protected readonly YargProfile YargProfile;
 
-        protected BaseEngine(SyncTrack syncTrack, bool isChordSeparate, bool isBot)
+        protected BaseEngine(SyncTrack syncTrack, bool isChordSeparate, EngineManager? engineManager, YargProfile yargProfile)
         {
             SyncTrack = syncTrack;
             Resolution = syncTrack.Resolution;
 
             TreatChordAsSeparate = isChordSeparate;
-            IsBot = isBot;
+            EngineManager = engineManager;
+            YargProfile = yargProfile;
+            IsBot = yargProfile.IsBot;
+
+            EngineManager?.RegisterPlayer(yargProfile, this);
         }
 
         /// <summary>
@@ -289,6 +296,8 @@ namespace YARG.Core.Engine
             BaseParameters.SongSpeed = speed;
             BaseParameters.HitWindow.Scale = speed;
         }
+
+        public virtual void AwardUnisonBonusStarPower() {}
 
         protected static void StartTimer(ref EngineTimer timer, double startTime, double offset = 0)
         {

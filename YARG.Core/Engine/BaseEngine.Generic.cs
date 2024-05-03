@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using YARG.Core.Chart;
 using YARG.Core.Engine.Logging;
+using YARG.Core.Game;
 using YARG.Core.Logging;
 using YARG.Core.Utility;
 
@@ -48,6 +49,8 @@ namespace YARG.Core.Engine
 
         public delegate void SoloEndEvent(SoloSection soloSection);
 
+        public delegate void UnisonBonusEvent();
+
         public NoteHitEvent?    OnNoteHit;
         public NoteMissedEvent? OnNoteMissed;
 
@@ -57,6 +60,8 @@ namespace YARG.Core.Engine
 
         public SoloStartEvent? OnSoloStart;
         public SoloEndEvent?   OnSoloEnd;
+
+        public UnisonBonusEvent? OnUnisonBonus;
 
         protected          int[]  StarScoreThresholds { get; }
         protected readonly double TicksPerSustainPoint;
@@ -76,8 +81,8 @@ namespace YARG.Core.Engine
         public override BaseStats            BaseStats      => EngineStats;
 
         protected BaseEngine(InstrumentDifficulty<TNoteType> chart, SyncTrack syncTrack,
-            TEngineParams engineParameters, bool isChordSeparate, bool isBot)
-            : base(syncTrack, isChordSeparate, isBot)
+            TEngineParams engineParameters, bool isChordSeparate, EngineManager? engineManager, YargProfile yargProfile)
+            : base(syncTrack, isChordSeparate, engineManager, yargProfile)
         {
             Chart = chart;
             Notes = Chart.Notes;
@@ -497,7 +502,7 @@ namespace YARG.Core.Engine
             }
         }
 
-        protected void AwardStarPower(TNoteType note)
+        private void AwardStarPower()
         {
             double previous = EngineStats.StarPowerAmount;
             double expected = EngineStats.StarPowerAmount += STAR_POWER_PHRASE_AMOUNT;
@@ -516,8 +521,19 @@ namespace YARG.Core.Engine
                 YargLogger.FailFormat(
                     "Unexpected jump in SP amount after awarding! Went from {0} to {1}, should be {2}", previous,
                     EngineStats.StarPowerAmount, expected);
+        }
 
+        protected void AwardStarPower(TNoteType note)
+        {
+            AwardStarPower();
             OnStarPowerPhraseHit?.Invoke(note);
+            EngineManager?.OnStarPowerPhraseHit(YargProfile, note);
+        }
+
+        public override void AwardUnisonBonusStarPower()
+        {
+            AwardStarPower();
+            OnUnisonBonus?.Invoke();
         }
 
         protected void UpdateStarPower()
