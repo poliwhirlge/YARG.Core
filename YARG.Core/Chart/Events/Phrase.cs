@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace YARG.Core.Chart
 {
@@ -61,6 +62,18 @@ namespace YARG.Core.Chart
         public override int GetHashCode()
         {
             return HashCode.Combine(Tick, TickEnd, Type);
+        }
+    }
+
+    public class UnisonPhrase
+    {
+        public Phrase Phrase{ get; }
+        public HashSet<Instrument> Instruments{ get; }
+
+        public UnisonPhrase(Phrase phrase, HashSet<Instrument> instruments)
+        {
+            Phrase = phrase;
+            Instruments = instruments;
         }
     }
 }

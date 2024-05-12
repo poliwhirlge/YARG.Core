@@ -102,8 +102,8 @@ namespace YARG.Core.Chart
             }
         }
 
-        public List<Phrase> UnisonPhrases { get; private set; } = new();
-        public Dictionary<Phrase, List<Instrument>> UnisonPhrasesToInstruments { get; private set; } = new();
+        public List<UnisonPhrase> UnisonPhrases { get; private set; } = new();
+        //public Dictionary<Phrase, List<Instrument>> UnisonPhrasesToInstruments { get; private set; } = new();
 
         // public InstrumentTrack<DjNote> Dj { get; set; } = new(Instrument.Dj);
 
@@ -208,7 +208,7 @@ namespace YARG.Core.Chart
             YargLogger.LogInfo("Detecting Unison Phrases!");
 
             // TODO: assert sp phrases are same across diffs
-            var phraseToInstrument = new Dictionary<Phrase, List<Instrument>>();
+            var phraseToInstrument = new Dictionary<Phrase, HashSet<Instrument>>();
             var fiveFretGuitarStarPower = FiveFretGuitar.Difficulties.Values.First().Phrases.Where(p => p.Type == PhraseType.StarPower).ToList();
             var fiveFretBassStarPower = FiveFretBass.Difficulties.Values.First().Phrases.Where(p => p.Type == PhraseType.StarPower).ToList();
             var proDrumsStarPower = ProDrums.Difficulties.Values.First().Phrases.Where(p => p.Type == PhraseType.StarPower).ToList();
@@ -218,7 +218,7 @@ namespace YARG.Core.Chart
             {
                 if (!phraseToInstrument.TryGetValue(phrase, out var instrumentList))
                 {
-                    instrumentList = new List<Instrument>();
+                    instrumentList = new HashSet<Instrument>();
                     phraseToInstrument[phrase] = instrumentList;
                 }
                 phraseToInstrument[phrase].Add(Instrument.FiveFretGuitar);
@@ -229,7 +229,7 @@ namespace YARG.Core.Chart
             {
                 if (!phraseToInstrument.TryGetValue(phrase, out var instrumentList))
                 {
-                    instrumentList = new List<Instrument>();
+                    instrumentList = new HashSet<Instrument>();
                     phraseToInstrument[phrase] = instrumentList;
                 }
                 phraseToInstrument[phrase].Add(Instrument.ProDrums);
@@ -240,7 +240,7 @@ namespace YARG.Core.Chart
             {
                 if (!phraseToInstrument.TryGetValue(phrase, out var instrumentList))
                 {
-                    instrumentList = new List<Instrument>();
+                    instrumentList = new HashSet<Instrument>();
                     phraseToInstrument[phrase] = instrumentList;
                 }
                 phraseToInstrument[phrase].Add(Instrument.FiveFretBass);
@@ -251,15 +251,25 @@ namespace YARG.Core.Chart
             {
                 if (!phraseToInstrument.TryGetValue(phrase, out var instrumentList))
                 {
-                    instrumentList = new List<Instrument>();
+                    instrumentList = new HashSet<Instrument>();
                     phraseToInstrument[phrase] = instrumentList;
                 }
                 phraseToInstrument[phrase].Add(Instrument.Keys);
                 YargLogger.LogFormatInfo("[Star Power] {0} {1}-{2}", Instrument.Keys, phrase.Tick, phrase.TickEnd);
             }
 
-            UnisonPhrasesToInstruments = phraseToInstrument.Where(entry => entry.Value.Count > 1).ToDictionary(kv => kv.Key, kv => kv.Value);
-            UnisonPhrases = UnisonPhrasesToInstruments.Keys.OrderBy(p => p.TickEnd).ToList();
+            var unisonPhrasesToInstruments = phraseToInstrument.Where(entry => entry.Value.Count > 1).ToDictionary(kv => kv.Key, kv => kv.Value);
+            var unisonPhrases = unisonPhrasesToInstruments.Keys.OrderBy(p => p.TickEnd).ToList();
+
+            uint lastTick = 0;
+            foreach (var phrase in unisonPhrases)
+            {
+                if (lastTick < phrase.Tick)
+                {
+                    UnisonPhrases.Add(new UnisonPhrase(phrase, unisonPhrasesToInstruments[phrase]));
+                    lastTick = phrase.TickEnd;
+                }
+            }
         }
 
         public void Append(SongChart song)

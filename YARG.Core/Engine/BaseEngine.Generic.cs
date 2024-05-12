@@ -122,6 +122,9 @@ namespace YARG.Core.Engine
             }
 
             Solos = GetSoloSections();
+
+            OnStarPowerPhraseHit += note => EngineManager?.OnStarPowerPhraseHit(YargProfile, note);
+            OnStarPowerPhraseMissed += note => EngineManager?.OnStarPowerPhraseMissed(YargProfile, note);
         }
 
         protected override void GenerateQueuedUpdates(double nextTime)
@@ -527,7 +530,6 @@ namespace YARG.Core.Engine
         {
             AwardStarPower();
             OnStarPowerPhraseHit?.Invoke(note);
-            EngineManager?.OnStarPowerPhraseHit(YargProfile, note);
         }
 
         public override void AwardUnisonBonusStarPower()
