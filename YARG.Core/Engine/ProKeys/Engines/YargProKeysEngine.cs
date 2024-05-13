@@ -1,11 +1,13 @@
 ﻿using YARG.Core.Chart;
+using YARG.Core.Game;
 using YARG.Core.Input;
 
 namespace YARG.Core.Engine.ProKeys.Engines
 {
     public class YargProKeysEngine : ProKeysEngine
     {
-        public YargProKeysEngine(InstrumentDifficulty<ProKeysNote> chart, SyncTrack syncTrack, ProKeysEngineParameters engineParameters, bool isBot) : base(chart, syncTrack, engineParameters, isBot)
+        public YargProKeysEngine(InstrumentDifficulty<ProKeysNote> chart, SyncTrack syncTrack, ProKeysEngineParameters engineParameters, EngineManager? engineManager,
+            YargProfile yargProfile) : base(chart, syncTrack, engineParameters, engineManager, yargProfile)
         {
         }
 
