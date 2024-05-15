@@ -320,11 +320,17 @@ namespace YARG.Core.Engine
 
         protected virtual void HitNote(TNoteType note)
         {
+            if (note.IsStarPowerStart)
+                EngineManager?.OnStarPowerPhraseStart(YargProfile, note);
+
             AdvanceToNextNote(note);
         }
 
         protected virtual void MissNote(TNoteType note)
         {
+            if (note.IsStarPowerStart)
+                EngineManager?.OnStarPowerPhraseStart(YargProfile, note);
+
             AdvanceToNextNote(note);
         }
 

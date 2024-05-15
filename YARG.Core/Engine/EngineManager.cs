@@ -1,16 +1,18 @@
 using System;
 using System.Collections.Generic;
-using System.Dynamic;
-using System.Net.WebSockets;
+using System.Linq;
 using YARG.Core.Chart;
-using YARG.Core.Engine.Guitar;
-using YARG.Core.Engine.Guitar.Engines;
-using YARG.Core.Engine.Drums.Engines;
 using YARG.Core.Game;
 using YARG.Core.Logging;
 
 namespace YARG.Core.Engine
 {
+    public delegate void OnUnisonPhraseStart(UnisonPhrase unisonPhrase, List<YargProfile> playersInUnison);
+    public delegate void OnUnisonPhraseFail(UnisonPhrase unisonPhrase, YargProfile yargProfile);
+    public delegate void OnUnisonPhraseComplete(UnisonPhrase unisonPhrase, YargProfile yargProfile);
+    public delegate void OnUnisonPhraseAward(UnisonPhrase unisonPhrase);
+    public delegate void OnUnisonPhraseEnd(UnisonPhrase unisonPhrase);
+    
     public class EngineManager
     {
         private List<YargProfile> YargProfiles = new();
@@ -19,14 +21,33 @@ namespace YARG.Core.Engine
         private List<UnisonPhrase> UnisonPhrases;
         private uint[] NumPlayersRequiredToHitPhrase;
         private uint[] NumPlayersHaveHitPhrase;
+        private uint[] NumPlayersHaveMissedPhrase;
         private Dictionary<Guid, BaseEngine> EnginesByYargProfile = new();
+
+        public OnUnisonPhraseStart? OnUnisonPhraseStart;
+        public OnUnisonPhraseFail? OnUnisonPhraseFail;
+        public OnUnisonPhraseComplete? OnUnisonPhraseComplete;
+        public OnUnisonPhraseAward? OnUnisonPhraseAward;
+        public OnUnisonPhraseEnd? OnUnisonPhraseEnd;
+
+        private int CurrentUnisonPhraseIdx = 0;
+
+        private enum UnisonStatus
+        {
+            NotStarted, Started, Failed, Complete
+        }
+
+        private UnisonStatus[] UnisonPhraseStatuses;
 
         public EngineManager(SongChart chart)
         {
-            //Chart = chart;
             UnisonPhrases = chart.UnisonPhrases;
             NumPlayersRequiredToHitPhrase = new uint[UnisonPhrases.Count];
             NumPlayersHaveHitPhrase = new uint[UnisonPhrases.Count];
+            NumPlayersHaveMissedPhrase = new uint[UnisonPhrases.Count];
+            UnisonPhraseStatuses = new UnisonStatus[UnisonPhrases.Count];
+            
+            Array.Fill(UnisonPhraseStatuses, UnisonStatus.NotStarted);
 
             foreach(var unisonPhrase in UnisonPhrases)
             {
@@ -50,35 +71,20 @@ namespace YARG.Core.Engine
                     NumPlayersRequiredToHitPhrase[i]++;
             }
             YargLogger.LogFormatInfo<string>("{0}", String.Join(", ", NumPlayersRequiredToHitPhrase));
-            // foreach (var x in NumPlayersHaveHitPhrase)
-            // {
-            //     YargLogger.LogFormatInfo("n {0}", x);
-            // }
         }
 
-        public void OnStarPowerPhraseHit(YargProfile yargProfile, ChartEvent note)
+        private int FindUnisonPhrase(uint tick, Instrument instrument)
         {
-            YargLogger.LogFormatInfo<string, Instrument, uint>("Player {0} [{1}] hit phrase with note tick {2}", yargProfile.Id.ToString(), yargProfile.CurrentInstrument, note.Tick);
-
-            var instrument = GetInstrument(yargProfile);
-            for (int unisonPhraseNum = 0; unisonPhraseNum < UnisonPhrases.Count; unisonPhraseNum++)
+            for (int unisonPhraseNum = CurrentUnisonPhraseIdx; unisonPhraseNum < UnisonPhrases.Count; unisonPhraseNum++)
             {
                 var unisonPhrase = UnisonPhrases[unisonPhraseNum];
-                if (unisonPhrase.Phrase.Tick <= note.Tick & unisonPhrase.Phrase.TickEnd > note.Tick)
+                if (unisonPhrase.Phrase.Tick <= tick & unisonPhrase.Phrase.TickEnd > tick)
                 {
                     if (unisonPhrase.Instruments.Contains(instrument))
-                    {
-                        NumPlayersHaveHitPhrase[unisonPhraseNum]++;
-                        if (NumPlayersHaveHitPhrase[unisonPhraseNum] == NumPlayersRequiredToHitPhrase[unisonPhraseNum])
-                            AwardUnisonBonus(unisonPhraseNum);
-                    }
+                        return unisonPhraseNum;
                 }
             }
-        }
-
-        public void OnStarPowerPhraseMissed(YargProfile yargProfile, ChartEvent note)
-        {
-            YargLogger.LogFormatInfo<string, Instrument, uint>("Player {0} [{1}] missed phrase with note tick {2}", yargProfile.Id.ToString(), yargProfile.CurrentInstrument, note.Tick);
+            return -1;
         }
 
         private void AwardUnisonBonus(int unisonPhraseNum)
@@ -96,10 +102,94 @@ namespace YARG.Core.Engine
             }
         }
 
-        private Instrument GetInstrument(YargProfile profile)
+        private Instrument GetInstrument(YargProfile yargProfile)
         {
             // pro and 4lane grouped together
-            return profile.CurrentInstrument == Instrument.FourLaneDrums ? Instrument.ProDrums : profile.CurrentInstrument;
+            return yargProfile.CurrentInstrument == Instrument.FourLaneDrums ? Instrument.ProDrums : yargProfile.CurrentInstrument;
+        }
+
+        private void InvokeUnisonStart(int unisonIndex)
+        {
+            var instruments = UnisonPhrases[unisonIndex].Instruments;
+            var profilesInUnison = YargProfiles.Where(p => instruments.Contains(GetInstrument(p))).ToList();
+            YargLogger.LogFormatInfo<string>("Unison start: {0}", String.Join(",", profilesInUnison));
+            OnUnisonPhraseStart?.Invoke(UnisonPhrases[unisonIndex], profilesInUnison);
+        }
+
+        private void InvokeUnisonFail(int unisonIndex, YargProfile yargProfile)
+        {
+            var instruments = UnisonPhrases[unisonIndex].Instruments;
+            var profilesInUnison = YargProfiles.Where(p => instruments.Contains(GetInstrument(p))).ToList();
+            OnUnisonPhraseFail?.Invoke(UnisonPhrases[unisonIndex], yargProfile);
+        }
+
+        internal void OnStarPowerPhraseStart<TNoteType>(YargProfile yargProfile, TNoteType note) where TNoteType : Note<TNoteType>
+        {
+            // if valid unison, "start" unison phrase
+            var unisonPhraseNum = FindUnisonPhrase(note.Tick, GetInstrument(yargProfile));
+            if (unisonPhraseNum == -1)
+                return;
+            
+            if (UnisonPhraseStatuses[unisonPhraseNum] == UnisonStatus.NotStarted)
+            {
+                YargLogger.LogFormatInfo<string, Instrument, uint, int>("Player {0} [{1}] starting phrase with note tick {2} [Unison phrase {3}]", yargProfile.Id.ToString(), yargProfile.CurrentInstrument, note.Tick, unisonPhraseNum);
+                InvokeUnisonStart(unisonPhraseNum);
+                UnisonPhraseStatuses[unisonPhraseNum] = UnisonStatus.Started;
+            }
+                
+            YargLogger.LogFormatInfo("Status of phrase: {0}", UnisonPhraseStatuses[unisonPhraseNum]);
+        }
+
+        public void OnStarPowerPhraseMissed(YargProfile yargProfile, ChartEvent note)
+        {
+            // if part of valid unison, "start" unison phrase, then fail it for this player
+            var unisonPhraseNum = FindUnisonPhrase(note.Tick, GetInstrument(yargProfile));
+            if (unisonPhraseNum == -1)
+                return;
+            
+            YargLogger.LogFormatInfo<string, Instrument, uint, int>("Player {0} [{1}] missed phrase with note tick {2} [Unison phrase {3}]", yargProfile.Id.ToString(), yargProfile.CurrentInstrument, note.Tick, unisonPhraseNum);
+
+            if (UnisonPhraseStatuses[unisonPhraseNum] == UnisonStatus.NotStarted)
+                InvokeUnisonStart(unisonPhraseNum);
+            InvokeUnisonFail(unisonPhraseNum, yargProfile);
+            YargLogger.LogFormatInfo("Status of phrase: {0}", UnisonPhraseStatuses[unisonPhraseNum]);
+            UnisonPhraseStatuses[unisonPhraseNum] = UnisonStatus.Failed;
+
+            NumPlayersHaveMissedPhrase[unisonPhraseNum]++;
+            CheckForPhraseCompletion(unisonPhraseNum);
+        }
+
+        public void OnStarPowerPhraseHit(YargProfile yargProfile, ChartEvent note)
+        {
+            var unisonPhraseNum = FindUnisonPhrase(note.Tick, GetInstrument(yargProfile));
+            if (unisonPhraseNum == -1)
+                return;
+            
+            YargLogger.LogFormatInfo<string, Instrument, uint, int>("Player {0} [{1}] hit phrase with note tick {2} [Unison phrase {3}]", yargProfile.Id.ToString(), yargProfile.CurrentInstrument, note.Tick, unisonPhraseNum);
+            if (UnisonPhraseStatuses[unisonPhraseNum] == UnisonStatus.NotStarted)
+            {
+                InvokeUnisonStart(unisonPhraseNum);
+                UnisonPhraseStatuses[unisonPhraseNum] = UnisonStatus.Started;
+            }
+            OnUnisonPhraseComplete?.Invoke(UnisonPhrases[unisonPhraseNum], yargProfile);
+
+            NumPlayersHaveHitPhrase[unisonPhraseNum]++;
+            CheckForPhraseCompletion(unisonPhraseNum);
+        }
+
+        private void CheckForPhraseCompletion(int unisonPhraseNum)
+        {
+            if (NumPlayersHaveHitPhrase[unisonPhraseNum] == NumPlayersRequiredToHitPhrase[unisonPhraseNum])
+            {
+                AwardUnisonBonus(unisonPhraseNum);
+                UnisonPhraseStatuses[unisonPhraseNum] = UnisonStatus.Complete;
+                OnUnisonPhraseAward?.Invoke(UnisonPhrases[unisonPhraseNum]);
+                OnUnisonPhraseEnd?.Invoke(UnisonPhrases[unisonPhraseNum]);
+            }
+            else if (NumPlayersHaveHitPhrase[unisonPhraseNum] + NumPlayersHaveMissedPhrase[unisonPhraseNum] == NumPlayersRequiredToHitPhrase[unisonPhraseNum])
+            {
+                OnUnisonPhraseEnd?.Invoke(UnisonPhrases[unisonPhraseNum]);
+            }
         }
     }
 
