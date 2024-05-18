@@ -209,10 +209,10 @@ namespace YARG.Core.Chart
 
             // TODO: assert sp phrases are same across diffs
             var phraseToInstrument = new Dictionary<Phrase, HashSet<Instrument>>();
-            var fiveFretGuitarStarPower = FiveFretGuitar.Difficulties.Values.First().Phrases.Where(p => p.Type == PhraseType.StarPower).ToList();
-            var fiveFretBassStarPower = FiveFretBass.Difficulties.Values.First().Phrases.Where(p => p.Type == PhraseType.StarPower).ToList();
-            var proDrumsStarPower = ProDrums.Difficulties.Values.First().Phrases.Where(p => p.Type == PhraseType.StarPower).ToList();
-            var keysStarPower = Keys.Difficulties.Values.First().Phrases.Where(p => p.Type == PhraseType.StarPower).ToList();
+            var fiveFretGuitarStarPower = FiveFretGuitar.FirstDifficulty().Phrases.Where(p => p.Type == PhraseType.StarPower).ToList();
+            var fiveFretBassStarPower = FiveFretBass.FirstDifficulty().Phrases.Where(p => p.Type == PhraseType.StarPower).ToList();
+            var proDrumsStarPower = ProDrums.FirstDifficulty().Phrases.Where(p => p.Type == PhraseType.StarPower).ToList();
+            var keysStarPower = Keys.FirstDifficulty().Phrases.Where(p => p.Type == PhraseType.StarPower).ToList();
 
             foreach(var phrase in fiveFretGuitarStarPower)
             {
