@@ -16,6 +16,7 @@ namespace YARG.Core.Engine
         where TEngineState : BaseEngineState, new()
     {
         protected const int POINTS_PER_NOTE = 50;
+        protected const int POINTS_PER_PRO_NOTE = POINTS_PER_NOTE + 10;
         protected const int POINTS_PER_BEAT = 25;
 
         // Max number of measures that SP will last when draining
@@ -179,7 +180,7 @@ namespace YARG.Core.Engine
             }
         }
 
-        protected void UpdateTimeVariables(double time)
+        protected override void UpdateTimeVariables(double time)
         {
             if (time < State.CurrentTime)
             {
@@ -323,7 +324,10 @@ namespace YARG.Core.Engine
             if (note.IsStarPowerStart)
                 EngineManager?.OnStarPowerPhraseStart(YargProfile, note);
 
-            AdvanceToNextNote(note);
+            if (note.ParentOrSelf.WasFullyHitOrMissed())
+            {
+                AdvanceToNextNote(note);
+            }
         }
 
         protected virtual void MissNote(TNoteType note)
@@ -331,7 +335,35 @@ namespace YARG.Core.Engine
             if (note.IsStarPowerStart)
                 EngineManager?.OnStarPowerPhraseStart(YargProfile, note);
 
-            AdvanceToNextNote(note);
+            if (note.ParentOrSelf.WasFullyHitOrMissed())
+            {
+                AdvanceToNextNote(note);
+            }
+        }
+
+        protected bool SkipPreviousNotes(TNoteType current)
+        {
+            bool skipped = false;
+            var prevNote = current.PreviousNote;
+            while (prevNote is not null && !prevNote.WasFullyHitOrMissed())
+            {
+                skipped = true;
+                YargLogger.LogFormatTrace("Missed note (Index: {0}) ({1}) due to note skip at {2}", State.NoteIndex, prevNote.IsParent ? "Parent" : "Child", State.CurrentTime);
+                MissNote(prevNote);
+
+                if (TreatChordAsSeparate)
+                {
+                    foreach (var child in prevNote.ChildNotes)
+                    {
+                        YargLogger.LogFormatTrace("Missed note (Index: {0}) ({1}) due to note skip at {2}", State.NoteIndex, child.IsParent ? "Parent" : "Child", State.CurrentTime);
+                        MissNote(child);
+                    }
+                }
+
+                prevNote = prevNote.PreviousNote;
+            }
+
+            return skipped;
         }
 
         protected abstract void AddScore(TNoteType note);
@@ -686,31 +718,6 @@ namespace YARG.Core.Engine
         {
             State.NoteIndex++;
             ReRunHitLogic = true;
-
-            if (note.NextNote is null)
-            {
-                return;
-            }
-
-            //note = note.NextNote;
-
-            // double dist = GetAverageNoteDistance(note);
-            // double fullWindow = EngineParameters.HitWindow.CalculateHitWindow(dist);
-            //
-            // double frontEnd = EngineParameters.HitWindow.GetFrontEnd(fullWindow);
-            // double backEnd = EngineParameters.HitWindow.GetBackEnd(fullWindow);
-            //
-            // // This is the time when the note will enter the hit window in the front end. Engine will update at this time
-            // double frontEndTime = note.Time + frontEnd;
-            // // Only queue if the note is not already in the hit window, happens if
-            // // multiple notes are in the hit window and the back-most one gets hit/missed
-            // if (frontEndTime > State.CurrentTime) QueueUpdateTime(frontEndTime);
-            //
-            // // This is the time when the note will leave the hit window in the back end (miss)
-            // double backEndTime = note.Time + backEnd;
-            // // Only queue if note has not already been missed
-            // // Very rare case; only happens when lagging enough to make a note skip the hit window entirely
-            // if (backEndTime > State.CurrentTime) QueueUpdateTime(backEndTime);
         }
 
         public double GetAverageNoteDistance(TNoteType note)

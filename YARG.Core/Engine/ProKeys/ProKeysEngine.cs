@@ -61,5 +61,113 @@ namespace YARG.Core.Engine.ProKeys
 
             OnOverhit?.Invoke();
         }
+
+        protected override void HitNote(ProKeysNote note)
+        {
+            if (note.WasHit || note.WasMissed)
+            {
+                YargLogger.LogFormatTrace("Tried to hit/miss note twice (Key: {0}, Index: {1}, Hit: {2}, Missed: {3})",
+                    note.Key, State.NoteIndex, note.WasHit, note.WasMissed);
+                return;
+            }
+
+            note.SetHitState(true, false);
+
+            // Detect if the last note(s) were skipped
+            // bool skipped = SkipPreviousNotes(note);
+
+            if (note.IsStarPower && note.IsStarPowerEnd && note.ParentOrSelf.WasFullyHit())
+            {
+                AwardStarPower(note);
+                EngineStats.StarPowerPhrasesHit++;
+            }
+
+            if (note.IsSoloStart)
+            {
+                StartSolo();
+            }
+
+            if (State.IsSoloActive)
+            {
+                Solos[State.CurrentSoloIndex].NotesHit++;
+            }
+
+            if (note.IsSoloEnd && note.ParentOrSelf.WasFullyHitOrMissed())
+            {
+                EndSolo();
+            }
+
+            EngineStats.Combo++;
+
+            if (EngineStats.Combo > EngineStats.MaxCombo)
+            {
+                EngineStats.MaxCombo = EngineStats.Combo;
+            }
+
+            EngineStats.NotesHit++;
+
+            UpdateMultiplier();
+
+            AddScore(note);
+
+            OnNoteHit?.Invoke(State.NoteIndex, note);
+            base.HitNote(note);
+        }
+
+        protected override void MissNote(ProKeysNote note)
+        {
+            if (note.WasHit || note.WasMissed)
+            {
+                YargLogger.LogFormatTrace("Tried to hit/miss note twice (Key: {0}, Index: {1}, Hit: {2}, Missed: {3})",
+                    note.Key, State.NoteIndex, note.WasHit, note.WasMissed);
+                return;
+            }
+
+            note.SetMissState(true, false);
+
+            if (note.IsStarPower)
+            {
+                StripStarPower(note);
+            }
+
+            if (note.IsSoloEnd && note.ParentOrSelf.WasFullyHitOrMissed())
+            {
+                EndSolo();
+            }
+
+            if (note.IsSoloStart)
+            {
+                StartSolo();
+            }
+
+            EngineStats.Combo = 0;
+
+            UpdateMultiplier();
+
+            OnNoteMissed?.Invoke(State.NoteIndex, note);
+            base.HitNote(note);
+        }
+
+        protected override void AddScore(ProKeysNote note)
+        {
+            int notePoints = POINTS_PER_PRO_NOTE * EngineStats.ScoreMultiplier;
+            AddScore(notePoints);
+        }
+
+        protected sealed override int CalculateBaseScore()
+        {
+            int score = 0;
+            foreach (var note in Notes)
+            {
+                score += POINTS_PER_PRO_NOTE * (1 + note.ChildNotes.Count);
+
+                foreach (var child in note.ChordEnumerator())
+                {
+                    score += (int) Math.Ceiling(child.TickLength / TicksPerSustainPoint);
+                }
+            }
+
+            return score;
+        }
     }
 }

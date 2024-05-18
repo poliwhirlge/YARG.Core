@@ -38,14 +38,14 @@ public class DrumEngineTester
         var chartPath = Path.Combine(_chartsDirectory!, "drawntotheflame.mid");
         var midi = MidiFile.Read(chartPath);
         var chart = SongChart.FromMidi(_settings, midi);
-        var notes = chart.ProDrums.Difficulties[Difficulty.Expert];
+        var notes = chart.ProDrums.GetDifficulty(Difficulty.Expert);
 
-        var engine = new YargDrumsEngine(notes, chart.SyncTrack, _engineParams);
+        var engine = new YargDrumsEngine(notes, chart.SyncTrack, _engineParams, true);
         var endTime = notes.GetEndTime();
         var timeStep = 0.01;
         for (double i = 0; i < endTime; i += timeStep)
         {
-            engine.UpdateBot(i);
+            engine.Update(i);
         }
 
         Assert.That(engine.EngineStats.SoloBonuses, Is.EqualTo(3900));
@@ -57,16 +57,16 @@ public class DrumEngineTester
         var chartPath = Path.Combine(_chartsDirectory!, "drawntotheflame.mid");
         var midi = MidiFile.Read(chartPath);
         var chart = SongChart.FromMidi(_settings, midi);
-        var notes = chart.ProDrums.Difficulties[Difficulty.Expert];
+        var notes = chart.ProDrums.GetDifficulty(Difficulty.Expert);
 
         notes.RemoveKickDrumNotes();
 
-        var engine = new YargDrumsEngine(notes, chart.SyncTrack, _engineParams);
+        var engine = new YargDrumsEngine(notes, chart.SyncTrack, _engineParams, true);
         var endTime = notes.GetEndTime();
         var timeStep = 0.01;
         for (double i = 0; i < endTime; i += timeStep)
         {
-            engine.UpdateBot(i);
+            engine.Update(i);
         }
 
         Assert.That(engine.EngineStats.NotesHit, Is.EqualTo(notes.GetTotalNoteCount()));
